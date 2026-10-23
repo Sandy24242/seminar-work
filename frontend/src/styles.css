@@ -20,7 +20,7 @@ table { width: 100%; border-collapse: collapse; margin-top: 8px; }
 th, td { text-align: left; padding: 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
 .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.78rem; font-weight: 600; background: #e7edf2; }
 .badge-loaded, .badge-completed, .badge-ready { background: #dcf3e5; color: var(--ok); }
-.badge-unavailable, .badge-failed, .badge-incomplete { background: #fde4e1; color: var(--bad); }
+.badge-unavailable, .badge-failed, .badge-incomplete, .badge-stand-in { background: #fde4e1; color: var(--bad); }
 .badge-uncertain { background: #fff1d6; color: var(--warn); }
 form { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; }
 .check { display: flex; gap: 8px; align-items: center; }

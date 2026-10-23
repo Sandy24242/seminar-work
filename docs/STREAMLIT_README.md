@@ -23,7 +23,8 @@ annotated JPEG, or a ZIP of all five.
 Follow **`docs/Dental_Caries_AI_Colab_Guide.pdf`**, or open **`colab/Run_Dental_Caries_AI_Website.ipynb`** in Colab and run
 the cells from top to bottom. In short:
 
-1. Upload `Dental_Caries_AI_Website.zip` to `MyDrive/dentalcaries/`.
+1. Nothing to upload: Step 3 clones the code from GitHub. Upload `Dental_Caries_AI_Website.zip` to `MyDrive/dentalcaries/`
+   only as a fallback if Colab cannot reach GitHub.
 2. Make sure the models are in `MyDrive/dentalcaries/pipeline_stage1_to_4_corrected/`.
 3. Run Steps 1–6 of the notebook. Step 7 gives you the website link:
    - **Option A:** Colab's private proxy.
@@ -36,7 +37,7 @@ python -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\
 pip install -r requirements.txt
 # put the 5 .keras files + 5 *_metadata.json files into models/  (or: export DCAI_MODELS_DIR=/path/to/folder)
 python scripts/check_models.py
-streamlit run app.py                                     # opens http://localhost:8501
+streamlit run streamlit_app.py                           # run from backend/; opens http://localhost:8501
 ```
 
 ### Where the app looks for the models
@@ -54,7 +55,7 @@ models. A missing model is shown as **Unavailable**, and its stage is never repo
 ## Project structure
 
 ```
-app.py                      Streamlit entry point (Home, Assessment, Results, Models & About)
+streamlit_app.py            Streamlit entry point (app.py in older ZIPs) (Home, Assessment, Results, Models & About)
 config.py                   model file names, model-folder search order, upload limits, notebook fall-backs
 pipeline/
   preprocessing.py          notebook Section 6.1 preprocessing contract + 6.7 TTA (unchanged)

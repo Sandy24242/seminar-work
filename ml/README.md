@@ -38,3 +38,36 @@ datasets to re-run them would risk silently changing model semantics. Train with
 
 The datasets must not be committed to Git. Keep them on Drive or on a local disk outside the repository; `.gitignore`
 excludes `*.zip`, `data/` and `datasets/`.
+
+## Evaluation on the held-out test split
+
+Every `*_metadata.json` stores the test metrics the notebook measured on its untouched test split: `test_metrics`
+(Stage 1, FDI, localizer, ICDAS), `test_metrics_gt_crops` (G.V. Black on ground-truth lesion crops), `test_ordinal` and
+`lesion_window_test_metrics` (ICDAS). Each file also stores the split sizes and a `split_fingerprint`. Print them with:
+
+```bash
+python backend/scripts/recorded_metrics.py backend/models --md recorded_metrics.md
+```
+
+These numbers come from the notebook; the script does not re-measure them. To re-measure:
+
+1. Open the notebook in Colab with the same dataset ZIPs on Drive.
+2. In Section 3 set `TRAIN_MODE = {"stage1": "load", "localizer": "load", "gvb": "load", "icdas": "load", "fdi": "load"}`.
+3. Run all. Nothing is retrained. The notebook rebuilds the group split (Section 10), loads the saved models and runs
+   its evaluation sections (19–22, 39–46, 63–72).
+4. `decide()` (Section 6.6) compares each model's saved `split_fingerprint` with the rebuilt split. On a mismatch it
+   only prints `WARNING: saved <stage> model was trained on a different split — its test metrics may be optimistic.`
+   Treat any stage with that warning as **not** evaluated on held-out data.
+
+Limits that apply to every metric: no dataset contains patient IDs, so the split is group-independent (duplicates,
+near-duplicates and linked crops are kept together), not patient-independent. Stage 4 has no ICDAS 0 class.
+
+To check the data itself first, run the read-only audit on the ZIPs:
+
+```bash
+python backend/scripts/audit_datasets.py healthy.zip caries.zip "lowoccyolo (4).zip" icdascl.zip caries_FDI_dataset_final.zip --near-dup --md dataset_audit.md
+```
+
+Or run `backend/colab/Validate_Real_Models_and_Data.ipynb`, which does all of the above in Colab, except the long
+re-evaluation run.
+

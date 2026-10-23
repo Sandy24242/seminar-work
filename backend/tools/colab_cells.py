@@ -13,58 +13,67 @@ from google.colab import drive
 drive.mount("/content/drive")
 print("Drive mounted:", os.path.isdir("/content/drive/MyDrive"))'''
 
-CELL_PATHS = '''# STEP 2 — Locate the website ZIP and the trained models on Google Drive
+CELL_PATHS = '''# STEP 2 — Locate the website code and the trained models on Google Drive
 import os, glob
 DRIVE_PROJECT = "/content/drive/MyDrive/dentalcaries"              # project folder (or shortcut)
 MODELS_DRIVE  = f"{DRIVE_PROJECT}/pipeline_stage1_to_4_corrected"  # written by the notebook
-ZIP_CANDIDATES = [f"{DRIVE_PROJECT}/Dental_Caries_AI_Website.zip",
+REPO_URL = "https://github.com/Sandy24242/seminar-work.git"        # preferred source of the website code
+ZIP_CANDIDATES = [f"{DRIVE_PROJECT}/Dental_Caries_AI_Website.zip",  # fallback if GitHub cannot be reached
                   "/content/drive/MyDrive/Dental_Caries_AI_Website.zip",
                   "/content/Dental_Caries_AI_Website.zip"]
 ZIP_PATH = next((p for p in ZIP_CANDIDATES if os.path.isfile(p)), None)
-print("Website ZIP :", ZIP_PATH or "NOT FOUND - upload Dental_Caries_AI_Website.zip first")
+print("Website code:", REPO_URL, "| fallback ZIP:", ZIP_PATH or "none")
 print("Model folder:", MODELS_DRIVE, "->", "found" if os.path.isdir(MODELS_DRIVE) else "NOT FOUND")
 for f in sorted(glob.glob(f"{MODELS_DRIVE}/*.keras")):
     print(f"   {os.path.basename(f):34} {os.path.getsize(f)/1e6:7.1f} MB")'''
 
-CELL_EXTRACT = '''# STEP 3 — Extract the website to the fast local Colab disk
-import os, zipfile, shutil
-APP_DIR = "/content/Dental_Caries_AI_Website"
-assert ZIP_PATH, "Website ZIP not found - upload it to MyDrive/dentalcaries/ and run Step 2 again"
-shutil.rmtree(APP_DIR, ignore_errors=True)
-with zipfile.ZipFile(ZIP_PATH) as z:
-    bad = z.testzip()
-    assert bad is None, f"The ZIP is damaged (first bad file: {bad}) - upload it again"
-    z.extractall("/content")
-for f in ["app.py", "config.py", "requirements-colab.txt", "pipeline/runner.py", "assets/logo.png"]:
+CELL_EXTRACT = '''# STEP 3 — Put the website on the fast local Colab disk (GitHub clone, or the ZIP as a fallback)
+import os, zipfile, shutil, subprocess
+for d in ("/content/seminar-work", "/content/Dental_Caries_AI_Website"):
+    shutil.rmtree(d, ignore_errors=True)
+r = subprocess.run(["git", "clone", "--depth", "1", REPO_URL, "/content/seminar-work"], capture_output=True, text=True)
+if r.returncode == 0:
+    APP_DIR = "/content/seminar-work/backend"
+    print("cloned", REPO_URL)
+else:
+    print("git clone failed:", r.stderr.strip()[-300:])
+    assert ZIP_PATH, "No website ZIP either - upload Dental_Caries_AI_Website.zip to MyDrive/dentalcaries/ and run Step 2 again"
+    with zipfile.ZipFile(ZIP_PATH) as z:
+        bad = z.testzip()
+        assert bad is None, f"The ZIP is damaged (first bad file: {bad}) - upload it again"
+        z.extractall("/content")
+    APP_DIR = "/content/Dental_Caries_AI_Website"
+ENTRY = "streamlit_app.py" if os.path.exists(f"{APP_DIR}/streamlit_app.py") else "app.py"   # app.py = older ZIPs
+for f in [ENTRY, "config.py", "requirements-colab.txt", "pipeline/runner.py", "assets/logo.png"]:
     print(("OK      " if os.path.exists(f"{APP_DIR}/{f}") else "MISSING ") + f)
-%cd /content/Dental_Caries_AI_Website'''
+%cd $APP_DIR'''
 
 CELL_INSTALL = '''# STEP 4 — Install the two extra packages (TensorFlow/Keras are already in Colab)
-!pip install -q -r /content/Dental_Caries_AI_Website/requirements-colab.txt
+!pip install -q -r {APP_DIR}/requirements-colab.txt
 import tensorflow as tf, keras, streamlit, reportlab
 print("TensorFlow", tf.__version__, "| Keras", keras.__version__)
 print("Streamlit", streamlit.__version__, "| ReportLab", reportlab.Version)'''
 
 CELL_MODELS = '''# STEP 5 — Copy the trained models next to the app and check that they load
 import os, shutil, glob
-LOCAL_MODELS = "/content/Dental_Caries_AI_Website/models"
+LOCAL_MODELS = f"{APP_DIR}/models"
 os.makedirs(LOCAL_MODELS, exist_ok=True)
 for f in glob.glob(f"{MODELS_DRIVE}/*.keras") + glob.glob(f"{MODELS_DRIVE}/*_metadata.json"):
     dst = f"{LOCAL_MODELS}/{os.path.basename(f)}"
     if not (os.path.exists(dst) and os.path.getsize(dst) == os.path.getsize(f)):
         shutil.copy(f, dst); print("copied", os.path.basename(f))
 os.environ["DCAI_MODELS_DIR"] = LOCAL_MODELS
-!cd /content/Dental_Caries_AI_Website && python scripts/check_models.py "$DCAI_MODELS_DIR"'''
+!cd {APP_DIR} && python scripts/check_models.py "$DCAI_MODELS_DIR"'''
 
 CELL_LAUNCH = '''# STEP 6 — Start the Streamlit website in the background
 import subprocess, time, urllib.request, os
 subprocess.run("pkill -f 'streamlit run' || true", shell=True)
 log = open("/content/streamlit.log", "w")
-cmd = ["streamlit", "run", "app.py", "--server.port", "8501", "--server.address", "0.0.0.0",
+cmd = ["streamlit", "run", ENTRY, "--server.port", "8501", "--server.address", "0.0.0.0",
        "--server.headless", "true", "--server.enableCORS", "false",
        "--server.enableXsrfProtection", "false"]
-env = {**os.environ, "DCAI_MODELS_DIR": "/content/Dental_Caries_AI_Website/models"}
-proc = subprocess.Popen(cmd, cwd="/content/Dental_Caries_AI_Website", env=env,
+env = {**os.environ, "DCAI_MODELS_DIR": LOCAL_MODELS}
+proc = subprocess.Popen(cmd, cwd=APP_DIR, env=env,
                         stdout=log, stderr=subprocess.STDOUT)
 HEALTH = "http://localhost:8501/_stcore/health"
 for _ in range(60):
@@ -117,8 +126,8 @@ CELL_STOP = '''# STEP 9 — Stop the website (and the tunnel, if used)
 
 CELLS = [
     ("mount", "Check the runtime and mount Google Drive", CELL_MOUNT),
-    ("paths", "Locate the website ZIP and the trained models", CELL_PATHS),
-    ("extract", "Extract the website", CELL_EXTRACT),
+    ("paths", "Locate the website code and the trained models", CELL_PATHS),
+    ("extract", "Get the website (GitHub clone or ZIP)", CELL_EXTRACT),
     ("install", "Install the requirements", CELL_INSTALL),
     ("models", "Provide the trained models and check them", CELL_MODELS),
     ("launch", "Launch the Streamlit app", CELL_LAUNCH),

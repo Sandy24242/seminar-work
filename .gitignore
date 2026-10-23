@@ -33,3 +33,6 @@ datasets/
 Thumbs.db
 .vscode/
 .idea/
+
+# Drive file-ID manifest for scripts/fetch_models.py (IDs give download access when link-shared)
+backend/models/drive_ids.json

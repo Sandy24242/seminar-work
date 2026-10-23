@@ -1,6 +1,6 @@
 # models/
 
-This folder is intentionally empty in the ZIP. The trained models total about 426 MB, so they were not packaged.
+This folder is intentionally empty in Git and in the ZIP. The trained models total about 426 MB, so they were not packaged.
 The app never uses placeholder or random models.
 
 For a local run, copy these 10 files here from Google Drive → `dentalcaries/pipeline_stage1_to_4_corrected/`:
@@ -21,3 +21,12 @@ python scripts/check_models.py
 
 In Google Colab you do not need to copy anything by hand. Step 5 of the Colab notebook/guide copies the files from Drive
 into this folder for you.
+
+Alternatively, share the files as "Anyone with the link can view", list their Drive file IDs in `drive_ids.json` in this
+folder (git-ignored), and run `python scripts/fetch_models.py models/drive_ids.json`. Then check the models against
+their metadata and run real predictions:
+
+```bash
+python scripts/validate_real_models.py --images /path/to/photos
+```
+

@@ -12,7 +12,7 @@ INTRO = """# Dental Caries AI Assessment System — run the website in Google Co
 
 **Before you start**
 1. `Runtime → Change runtime type → T4 GPU` (CPU also works, but model loading and analysis are slower).
-2. `Dental_Caries_AI_Website.zip` is in `MyDrive/dentalcaries/` (or `MyDrive/`).
+2. Internet access to github.com (the code is cloned from GitHub). Without it, put `Dental_Caries_AI_Website.zip` in `MyDrive/dentalcaries/` (or `MyDrive/`) as a fallback.
 3. The trained models are in `MyDrive/dentalcaries/pipeline_stage1_to_4_corrected/` (written by the training notebook).
 
 Run the cells **from top to bottom**. Use **Option A or Option B** in Step 7 to open the website.
