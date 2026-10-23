@@ -60,6 +60,14 @@ def test_status_and_predict_with_standins(client_with, standin_dir):
     assert body["lesions"] and all("box_xyxy_px" in l for l in body["lesions"])
     assert body["annotated_jpeg_base64"]
     assert body["stage_status"]["stage1"] == "Completed"
+    assert body["test_standins_used"] is True                    # stand-in outputs are always labelled as such
+
+
+def test_status_flags_standin_models(client_with, standin_dir, tmp_path):
+    st = client_with(standin_dir).get("/models/status").json()
+    assert st["test_standins_loaded"] is True and all(m["test_standin"] for m in st["models"])
+    st = client_with(str(tmp_path)).get("/models/status").json()
+    assert st["test_standins_loaded"] is False and not any(m["test_standin"] for m in st["models"])
 
 
 def test_predict_healthy_stops_cascade(client_with, standin_dir):

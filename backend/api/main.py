@@ -59,7 +59,8 @@ app = FastAPI(title=config.APP_TITLE, version=config.APP_VERSION, lifespan=lifes
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[o.strip() for o in os.environ.get(
-        "DCAI_CORS_ORIGINS", "http://127.0.0.1:5173,http://localhost:5173").split(",") if o.strip()],
+        "DCAI_CORS_ORIGINS",       # Vite dev server (5173) and `npm run preview` of the production build (4173)
+        "http://127.0.0.1:5173,http://localhost:5173,http://127.0.0.1:4173,http://localhost:4173").split(",") if o.strip()],
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
@@ -88,9 +89,11 @@ def models_status():
             "reason": None if reg.has(k) else reg.unavailable.get(k, "not loaded"),
             "class_names": reg.meta.get(k, {}).get("class_names") if reg.has(k) else None,
             "load_seconds": reg.load_seconds.get(k),
+            "test_standin": reg.has(k) and reg.meta.get(k, {}).get("model") == "TEST STAND-IN",   # tests/standin_models.py
         })
     return {
         "ready": not reg.missing_required,
+        "test_standins_loaded": any(r["test_standin"] for r in rows),
         "missing_required": reg.missing_required,
         "models_dir_name": os.path.basename(os.path.normpath(_state["models_dir"] or "")),   # no absolute server path
         "versions": reg.versions,
@@ -122,5 +125,6 @@ async def predict(file: UploadFile = File(...), continue_if_uncertain: bool = Fo
     out["step_titles"] = STEP_TITLES
     out["annotated_jpeg_base64"] = base64.b64encode(encode_jpeg(annotated)).decode() if annotated is not None else None
     out["disclaimer"] = config.ACADEMIC_DISCLAIMER
+    out["test_standins_used"] = any(m.get("model") == "TEST STAND-IN" for m in reg.meta.values())   # never true with real weights
     log.info("predict: %s %sx%s -> %s", info["format"], info["width"], info["height"], out.get("overall"))
     return out

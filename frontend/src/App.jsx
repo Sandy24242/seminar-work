@@ -62,13 +62,19 @@ function ModelPanel({ health, status, error }) {
                 </div>
               </td>
               <td>
-                <Badge status={m.loaded ? "Loaded" : "Unavailable"} />
+                <Badge status={m.loaded ? (m.test_standin ? "Stand-in" : "Loaded") : "Unavailable"} />
               </td>
               <td className="small">{m.loaded ? (m.class_names || []).join(", ") || "loaded" : m.reason}</td>
             </tr>
           ))}
         </tbody>
       </table>
+      {status.test_standins_loaded && (
+        <p className="warn">
+          TEST STAND-IN models are loaded (untrained test fixtures). Their outputs are meaningless and are not trained-model
+          results. Put the trained .keras files in the backend model folder.
+        </p>
+      )}
       {!status.ready && (
         <p className="warn">
           Required model(s) missing: {status.missing_required.join(", ")}. The stages that need them are reported as
@@ -94,6 +100,12 @@ function Results({ res, previewUrl }) {
   const s1 = res.stage1;
   return (
     <section className="card">
+      {res.test_standins_used && (
+        <p className="warn">
+          Produced by TEST STAND-IN models (untrained test fixtures). These outputs are meaningless and are not
+          trained-model results.
+        </p>
+      )}
       <h2>Result</h2>
       <p className="overall">{res.overall}</p>
       {res.error && <p className="warn">{res.error}</p>}
