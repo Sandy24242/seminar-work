@@ -33,7 +33,7 @@ the cells from top to bottom. In short:
 
 ```bash
 python -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
+pip install -r requirements-streamlit.txt
 # put the 5 .keras files + 5 *_metadata.json files into models/  (or: export DCAI_MODELS_DIR=/path/to/folder)
 python scripts/check_models.py
 streamlit run app.py                                     # opens http://localhost:8501

@@ -1,8 +1,16 @@
-**/node_modules
-frontend
-docs
-**/__pycache__
-**/.pytest_cache
-.git
-.env
+# Only backend/ and models/ are needed in the image.
+*
+!backend/
+!models/
+backend/models/*.keras
+**/__pycache__/
+**/*.py[cod]
+**/.pytest_cache/
+**/.venv/
+**/venv/
 **/.env
+**/.env.*
+backend/tests/
+backend/tools/
+backend/colab/
+backend/assets/fonts/

@@ -13,7 +13,7 @@ Spaces CPU tier: 2 vCPU / 16 GB RAM). Inference is real; nothing is mocked.
    git clone https://huggingface.co/spaces/<you>/<space> hf-space
    cp -r Dockerfile .dockerignore backend models hf-space/
    cd hf-space && git lfs install && git lfs track "*.keras" && git add . 
-   printf -- '---\ntitle: Dental Caries AI API\nsdk: docker\napp_port: 7860\n---\n' > README.md && git add README.md
+   printf -- '---\ntitle: Dental Caries AI API\nsdk: docker\napp_port: 8000\n---\n' > README.md && git add README.md
    git commit -m "Deploy API" && git push   # use an HF write token as the password
    ```
 3. Space → Settings → Variables: `DCAI_CORS_ORIGINS=https://<your-project>.vercel.app` and optionally

@@ -1,17 +1,44 @@
-# FastAPI backend + the 5 real .keras models, for Hugging Face Spaces (Docker SDK) or any container host.
-# Build from a checkout where `git lfs pull` has run, so models/*.keras are real weights, not LFS pointers.
+# Dental Caries AI — backend (FastAPI + TensorFlow inference), with the trained models baked in.
+#
+# Build from the REPOSITORY ROOT (the image needs backend/ and models/):
+#   git lfs install && git lfs pull          # the .keras files must be real weights, not LFS pointer files
+#   docker build -t dental-caries-api .
+#   docker run --rm -p 8000:8000 -e DCAI_CORS_ORIGINS=https://<your-frontend>.vercel.app dental-caries-api
+#
+# Hosts that set $PORT (Render, Railway, Fly.io, Hugging Face Spaces) are supported. The models need ~1.5 GB RAM.
+# To build without weights and mount them at run time instead:
+#   docker build --build-arg REQUIRE_MODELS=0 -t dental-caries-api .
+#   docker run -p 8000:8000 -v /path/to/models:/app/models:ro dental-caries-api
+
 FROM python:3.12-slim
-ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 TF_CPP_MIN_LOG_LEVEL=2 DCAI_MODELS_DIR=/app/models PORT=7860
-RUN apt-get update && apt-get install -y --no-install-recommends libgl1 libglib2.0-0 && rm -rf /var/lib/apt/lists/*
-RUN useradd -m -u 1000 user
-WORKDIR /app
-COPY backend/requirements.txt backend/requirements.txt
-RUN pip install --no-cache-dir -r backend/requirements.txt
-COPY --chown=user backend backend
-COPY --chown=user models models
-# Fail the build if LFS pointers were copied instead of weights
-RUN python -c "import glob,os,sys; s=[f for f in glob.glob('models/*.keras') if os.path.getsize(f)<1_000_000]; sys.exit('LFS pointer files, run git lfs pull: %s'%s if s or len(glob.glob('models/*.keras'))!=5 else 0)"
-USER user
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    TF_CPP_MIN_LOG_LEVEL=2 \
+    DCAI_MODELS_DIR=/app/models \
+    PORT=8000
+
+# Non-root user (uid 1000 is also what Hugging Face Spaces expects)
+RUN useradd --create-home --uid 1000 app
 WORKDIR /app/backend
-EXPOSE 7860
-CMD ["sh", "-c", "uvicorn api.main:app --host 0.0.0.0 --port ${PORT}"]
+
+COPY backend/requirements.txt .
+RUN pip install -r requirements.txt
+
+COPY --chown=app:app backend/ /app/backend/
+COPY --chown=app:app models/ /app/models/
+
+# Fail the build early if the weights are Git LFS pointer files (run `git lfs pull` before building).
+ARG REQUIRE_MODELS=1
+RUN if [ "$REQUIRE_MODELS" = "1" ]; then python scripts/check_weights_present.py /app/models; fi
+
+USER app
+EXPOSE 8000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=120s --retries=3 \
+    CMD python -c "import os, urllib.request; urllib.request.urlopen(f'http://127.0.0.1:{os.environ.get(\"PORT\", \"8000\")}/health', timeout=4)"
+
+# One worker: each worker loads all five models (~1.5 GB).
+CMD ["sh", "-c", "exec uvicorn api.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1"]

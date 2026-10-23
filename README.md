@@ -112,6 +112,36 @@ curl.exe -F "file=@backend\assets\clinical_caries_example.jpg" http://127.0.0.1:
 
 Stages whose model is missing have `status: "UNAVAILABLE"` and a `reason`.
 
+## Deploying the backend (Docker)
+
+The backend needs TensorFlow and about 1 GB of RAM at run time with all five models loaded, so it does **not** fit
+Vercel's standard serverless functions (see [`docs/VERCEL_DEPLOYMENT.md`](docs/VERCEL_DEPLOYMENT.md)). Run it as a container instead. The `Dockerfile` at the repository root bakes in the
+weights from `models/`:
+
+```bash
+git lfs install && git lfs pull                 # the build fails if models/*.keras are LFS pointer files
+docker build -t dental-caries-api .
+docker run --rm -p 8000:8000 -e DCAI_CORS_ORIGINS=https://<your-frontend>.vercel.app dental-caries-api
+curl http://127.0.0.1:8000/models/status        # "ready": true
+```
+
+- **Hosts:** Render, Railway, Fly.io, Hugging Face Spaces (Docker SDK, `app_port: 8000`) or any VM can build from this
+  `Dockerfile`. The container listens on `$PORT` (default 8000). Pick a plan with at least 1.5 GB of RAM. The host must
+  fetch Git LFS files when it clones the repository; otherwise the build stops with a message naming the pointer files.
+- **Without weights in the image:** build with `--build-arg REQUIRE_MODELS=0`, then mount the models at run time with
+  `-v /path/to/models:/app/models:ro`.
+- **Frontend:** keep it on Vercel. Set `VITE_API_BASE_URL` to the backend's public URL in the Vercel project settings,
+  then redeploy.
+- **Image contents:** the image installs only `backend/requirements.txt`, the API-only dependency set without Streamlit. It runs as a non-root user
+  with one worker, and has a health check on `/health`.
+
+Verified on 23 Oct 2026 with Docker 29.9.1:
+- The image builds, and the build fails with a clear message when the weights are LFS pointers.
+- The container starts in about 20 s, and `/models/status` reports all 5 models loaded.
+- `/predict` gives the same real-model result as the local run, and a `.txt` upload gets HTTP 422.
+- CORS headers are correct, the process runs as uid 1000, the health check reports `healthy`, and memory use is about
+  1 GB after inference.
+
 ## Datasets (kept on Google Drive, never in Git)
 
 The datasets and weights live in the project Drive folder. [`docs/DATA_AND_MODELS.md`](docs/DATA_AND_MODELS.md) has
