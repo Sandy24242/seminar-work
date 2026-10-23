@@ -14,14 +14,15 @@ frontend/dist/
 *.pem
 *.key
 credentials*.json
-# Trained models (hundreds of MB; download from Google Drive, see backend/models/README.md)
+# Trained weights (hundreds of MB; download from Google Drive, see backend/models/README.md).
+# The small *_metadata.json files in backend/models/ are tracked on purpose.
 *.keras
 *.h5
 *.pt
 *.onnx
 *.tflite
-backend/models/*_metadata.json
-backend/models/pipeline_metadata.json
+# ...except the trained models in the top-level models/ folder, stored with Git LFS (.gitattributes)
+!/models/*.keras
 # Datasets and archives
 data/
 datasets/

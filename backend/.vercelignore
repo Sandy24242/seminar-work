@@ -1,0 +1,12 @@
+# Not needed by the deployed REST API (api/main.py); keeps the function bundle smaller.
+tests/
+colab/
+tools/
+scripts/
+.streamlit/
+streamlit_app.py
+components/
+__pycache__/
+*.pyc
+.env
+.env.*

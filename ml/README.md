@@ -15,9 +15,10 @@ the notebook's own code (Sections 3, 6.1, 6.6, 6.7, 76, 82) and checks that the 
 | Part 8–10, §28–48 | `stage3_gvblack_model.keras` | ResNet50 on lesion context crops (pad 0.5) | G.V. Black Class I–VI |
 | Part 11–13, §49–74 | `stage4_icdas_model.keras` | EfficientNetB0 on tooth-scale windows | ICDAS 1–6 (ICDAS 0 is not modelled) |
 
-The Stage 1 numbers in the table come from `stage1_caries_model_metadata.json`, which was read from Google Drive on
-23 Oct 2026. For the other stages, the architecture details come from the notebook's Section 75 output; the metadata
-files hold the authoritative values.
+All five `*_metadata.json` files were read from Google Drive on 23 Oct 2026; see `docs/DATA_AND_MODELS.md`
+for the verified dataset counts, splits and caveats.
+
+Dataset tools: `ml/dcai_data/` (paths + validation), `ml/inventory_datasets.py`, `ml/check_metadata.py`, `ml/colab/`.
 
 Older notebooks (`Dental_Caries_Final_Pipeline_Stage1_to_Stage3*.ipynb`, `..._Stage1_to_Stage4_FINAL_MemorySafe`,
 `GVBlack_*`) were **not available in this session**. According to the project history, the Stage 1–3 version skipped FDI

@@ -1,0 +1,4 @@
+# Optional Streamlit UI (streamlit_app.py). Not needed by the REST API / Vercel deployment.
+-r requirements.txt
+streamlit>=1.50,<2
+plotly>=5.20
