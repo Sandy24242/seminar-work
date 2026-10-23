@@ -60,6 +60,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[o.strip() for o in os.environ.get(
         "DCAI_CORS_ORIGINS", "http://127.0.0.1:5173,http://localhost:5173").split(",") if o.strip()],
+    allow_origin_regex=os.environ.get("DCAI_CORS_ORIGIN_REGEX") or None,   # e.g. Vercel preview URLs
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )

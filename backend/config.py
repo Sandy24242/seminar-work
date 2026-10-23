@@ -20,6 +20,7 @@ ASSETS_DIR = os.path.join(PROJECT_ROOT, "assets")
 # Where the trained models live. First existing folder that contains stage1_caries_model.keras wins:
 #   1. environment variable DCAI_MODELS_DIR (set by the Colab launcher / guide)
 #   2. <project>/models                     (copy the files here for an offline / local run)
+#      or <repo>/models                     (where the Git LFS weights are committed)
 #   3. the notebook's own output folder on Google Drive (Colab with Drive mounted)
 # ---------------------------------------------------------------------------------------------------------------
 DRIVE_BASE = "/content/drive/MyDrive/dentalcaries"
@@ -27,6 +28,7 @@ NOTEBOOK_OUT_SUBDIR = "pipeline_stage1_to_4_corrected"
 MODELS_DIR_CANDIDATES = [
     os.environ.get("DCAI_MODELS_DIR", ""),
     os.path.join(PROJECT_ROOT, "models"),
+    os.path.join(os.path.dirname(PROJECT_ROOT), "models"),   # repo-root models/ (Git LFS weights)
     f"{DRIVE_BASE}/{NOTEBOOK_OUT_SUBDIR}",
 ]
 
