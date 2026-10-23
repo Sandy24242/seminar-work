@@ -21,6 +21,8 @@ credentials*.json
 *.pt
 *.onnx
 *.tflite
+# ...except the trained models in the top-level models/ folder, stored with Git LFS (.gitattributes)
+!/models/*.keras
 # Datasets and archives
 data/
 datasets/

@@ -57,5 +57,21 @@ These numbers were copied from the metadata files the notebook wrote. They were 
 
 Every metadata key that `backend/pipeline` reads is present with a usable type, including the TTA variants
 (`none`, `hflip+zoom`) and the ICDAS `inference_window`. Run `python ml/check_metadata.py <models folder>` to re-check.
-Whether the `.keras` files load under the pinned TensorFlow 2.21.0 / Keras 3.13.2 (the versions recorded at training
-time) is **not yet verified**. Verify it with `backend/scripts/smoke_test_real_models.py` or the Colab notebook.
+**Real weights verified (23 Oct 2026).** The five `.keras` files in `models/` (Git LFS) passed these checks:
+- `git lfs fsck` is OK, and every archive passes a ZIP CRC check.
+- All five load under TensorFlow 2.21.0 / Keras 3.13.2, taking 1.3–5.1 s each on CPU.
+- They run the full cascade.
+- `test_notebook_parity.py` with the real weights passes: the website's results equal the training notebook's own code
+  on the same weights and image.
+
+On `backend/assets/clinical_caries_example.jpg` (a 767×464 crop of the notebook's preview of `UFV72.jpg`), the outputs were:
+- Stage 1 CARIES (P = 1.000).
+- 3 teeth detected (11, an uncertain one, 21).
+- 2 lesions:
+  - L1 on tooth 21: G.V. Black Class III (0.60), ICDAS 3 (0.61).
+  - L2 with no tooth number: Class IV (1.00), ICDAS 5 (0.62).
+
+The notebook's saved figure for the original `UFV72.jpg` shows the same teeth and lesion positions, but L1 as Class IV /
+ICDAS 5. L1's two confidences here are only about 0.6. Since the code paths are proven identical, the difference comes
+from the input: the bundled image is a re-encoded screenshot crop, not the original photograph. To compare exactly, run
+the smoke test on the original `UFV72.jpg`.
