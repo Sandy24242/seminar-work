@@ -1,0 +1,4 @@
+# Installed on top of Google Colab's pre-installed packages (TensorFlow, Keras, NumPy, pandas, OpenCV, Pillow, Plotly).
+# Do NOT reinstall TensorFlow in Colab: the notebook trained and saved the models with Colab's own TensorFlow/Keras.
+streamlit>=1.50,<2
+reportlab>=4.0

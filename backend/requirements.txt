@@ -1,0 +1,19 @@
+# Website dependencies. Google Colab already provides TensorFlow/Keras, NumPy, pandas, OpenCV, Pillow and Plotly,
+# so in Colab only `pip install -r requirements-colab.txt` is needed (see the Colab guide).
+#
+# The trained .keras models were saved with TensorFlow 2.21.0 / Keras 3.13.2 (versions printed by the notebook).
+# Use Keras >= 3.13 to load them; older Keras 3 versions may not know every layer in the saved files.
+tensorflow==2.21.0
+keras==3.13.2
+streamlit>=1.50,<2
+reportlab>=4.0
+opencv-python-headless>=4.8
+numpy>=1.26
+pandas>=2.0
+pillow>=10.0
+plotly>=5.20
+
+# REST API used by the React frontend (backend/api/main.py)
+fastapi>=0.115
+uvicorn[standard]>=0.30
+python-multipart>=0.0.9
