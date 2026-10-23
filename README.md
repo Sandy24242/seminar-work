@@ -23,7 +23,7 @@ docs/       Colab guide (PDF), previous test report, screenshots, Streamlit READ
 
 | Stage | Code | Trained weights | Verified with real weights in this repo's CI/session? |
 |---|---|---|---|
-| Stage 1 — Healthy vs Caries | ✅ | On your Google Drive (`stage1_caries_model.keras`, 45 MB) | ❌ — Drive download blocked in the build environment |
+| Stage 1 — Healthy vs Caries | ✅ | On your Google Drive (`pipeline_stage1_to_4_corrected/`) (`stage1_caries_model.keras`, 45 MB) | ❌ — Drive download blocked in the build environment |
 | Stage 2 — FDI tooth numbers | ✅ (optional stage) | On Drive (`stage2_fdi_detector.keras`, 30 MB) | ❌ same |
 | Lesion localizer | ✅ | On Drive (`cavity_localizer_model.keras`, 29 MB) | ❌ same |
 | Stage 3 — G.V. Black | ✅ | On Drive (`stage3_gvblack_model.keras`, 272 MB) | ❌ same |
@@ -103,6 +103,41 @@ curl.exe -F "file=@backend\assets\clinical_caries_example.jpg" http://127.0.0.1:
 
 Stages whose model is missing have `status: "UNAVAILABLE"` and a `reason`.
 
+## Datasets (kept on Google Drive, never in Git)
+
+The datasets and weights live in the project Drive folder. [`docs/DATA_AND_MODELS.md`](docs/DATA_AND_MODELS.md) has
+the verified layout, which task each dataset supports, and the caveats.
+
+| Dataset folder on Drive | Used for |
+|---|---|
+| `healthy/` + `caries/` | Stage 1 healthy vs caries (subfolders of `caries/` are photographic **views**, not classes) |
+| `caries_FDI_dataset_final/` | Stage 2 FDI detection (YOLO `.txt`, 26 FDI classes) |
+| lesion YOLO boxes (notebook Section 25/29) | localizer + Stage 3 G.V. Black (class mapping is owner-confirmed, not provable from the files) |
+| `icdascl/ICDAS_1_to_6_Classified/` | Stage 4 ICDAS 1–6 |
+| `pipeline_stage1_to_4_corrected/` | the trained `.keras` + `*_metadata.json` the website loads |
+
+Configure paths with environment variables. The defaults match the notebook.
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `DCAI_DATA_ROOT` | `/content/drive/MyDrive/dentalcaries` | folder holding the dataset folders / ZIPs |
+| `DCAI_<KEY>_DIR` | `<root>/<folder>` | override one dataset (`FDI`, `CARIES_VIEWS`, `HEALTHY`, `ICDAS`, `LOWER_OCCLUSAL_YOLO`) |
+| `DCAI_MODELS_DIR` | `backend/models`, then the Drive folder | trained models for the backend |
+
+If the folder is shared with you rather than owned, add a shortcut to it in *My Drive* so that Colab can reach it
+under `/content/drive/MyDrive/...`.
+
+Tools (run them where the data is mounted, normally Colab):
+
+```bash
+python ml/inventory_datasets.py --out dataset_inventory --check-zips   # counts, labels, corrupt files, duplicates, views
+python ml/check_metadata.py "$DCAI_MODELS_DIR"                          # metadata vs website contract (no weights needed)
+python backend/scripts/smoke_test_real_models.py --models "$DCAI_MODELS_DIR" --images <held-out photos>
+```
+
+The Colab notebook [`ml/colab/Dataset_Inventory_and_Model_Check.ipynb`](ml/colab/Dataset_Inventory_and_Model_Check.ipynb)
+runs all of these against your Drive, followed by the notebook-parity test on the real weights.
+
 ## Training
 
 See [`ml/README.md`](ml/README.md). Training runs in Google Colab (GPU) with the notebook, using the datasets on your
@@ -118,6 +153,11 @@ cd ..\frontend; npm run build
 
 Observed on 23 Oct 2026 (Linux, Python 3.13, TF 2.21.0, Keras 3.13.2): `pytest -q` → **54 passed**. That is the 44
 original tests, including notebook parity, plus 10 API tests. `npm run build` succeeded.
+
+**Which tests use real weights.** None of the automated tests above use the trained weights. Real-weight checks are
+`scripts/check_models.py`, `scripts/smoke_test_real_models.py` (it refuses stand-ins) and `test_notebook_parity.py`
+with `DCAI_PARITY_MODELS_DIR` set. As of 23 Oct 2026 these have **not** been run, because the weights could not be
+downloaded into the build environment. `ml/tests` (7 tests) checks the dataset utilities on small generated fixtures.
 
 Model-dependent tests use **test-only stand-in models** (`backend/tests/standin_models.py`). These are untrained Keras
 models with the real file names, shapes and metadata keys. They test the code paths only and are never used by the app.
