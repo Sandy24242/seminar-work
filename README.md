@@ -1,3 +1,13 @@
+---
+title: Dental Caries AI
+emoji: 🦷
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+app_port: 8000
+pinned: false
+---
+
 # Dental Caries AI
 
 AI-assisted analysis of intraoral photographs, built as an academic proof of concept. The system runs the trained

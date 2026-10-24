@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { API_BASE, getHealth, getModelStatus, predict } from "./api.js";
 import logo from "./logo.png";
 
@@ -20,19 +20,45 @@ function Badge({ status }) {
   return <span className={`badge badge-${String(status).toLowerCase()}`}>{status}</span>;
 }
 
-function ModelPanel({ health, status, error }) {
+function ModelPanel({ health, status, error, isWaking, attempt, maxAttempts, countdown, onRetry }) {
+  if (isWaking) {
+    return (
+      <section className="card card-waking">
+        <div className="waking-header">
+          <div className="spinner" aria-hidden="true" />
+          <div>
+            <h2 style={{ margin: 0 }}>Backend is waking up…</h2>
+            <p className="muted small" style={{ margin: "4px 0 0" }}>
+              Free-tier cloud containers sleep when idle. Starting container and loading TensorFlow models (~15–30s).
+            </p>
+          </div>
+        </div>
+        <div className="waking-status">
+          <span>Attempt {attempt} of {maxAttempts} · Retrying in {countdown}s</span>
+          <button type="button" className="btn-secondary" onClick={onRetry}>
+            Retry Now
+          </button>
+        </div>
+      </section>
+    );
+  }
+
   if (error) {
     return (
       <section className="card error">
         <h2>Backend not reachable</h2>
         <p>
-          Could not contact <code>{API_BASE}</code>: {error}. Start the backend (see README) or set{" "}
-          <code>VITE_API_BASE_URL</code>.
+          Could not contact <code>{API_BASE}</code>: {error}. If the backend was sleeping, it may take up to 30 seconds to wake up.
         </p>
+        <button type="button" className="btn-secondary" onClick={onRetry}>
+          Retry Connection
+        </button>
       </section>
     );
   }
+
   if (!status) return <section className="card">Checking backend…</section>;
+
   return (
     <section className="card">
       <h2>
@@ -97,7 +123,6 @@ function Results({ res, previewUrl }) {
       <h2>Result</h2>
       <p className="overall">{res.overall}</p>
       {res.error && <p className="warn">{res.error}</p>}
-
       <table>
         <thead>
           <tr>
@@ -184,23 +209,60 @@ export default function App() {
   const [health, setHealth] = useState(null);
   const [status, setStatus] = useState(null);
   const [backendError, setBackendError] = useState(null);
+  const [isWaking, setIsWaking] = useState(false);
+  const [attempt, setAttempt] = useState(1);
+  const [countdown, setCountdown] = useState(4);
   const [file, setFile] = useState(null);
   const [continueUncertain, setContinueUncertain] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const [result, setResult] = useState(null);
 
+  const maxAttempts = 12;
+
   const previewUrl = useMemo(() => (file ? URL.createObjectURL(file) : null), [file]);
   useEffect(() => () => previewUrl && URL.revokeObjectURL(previewUrl), [previewUrl]);
 
+  const checkBackend = useCallback(async (currAttempt = 1) => {
+    try {
+      const h = await getHealth();
+      setHealth(h);
+      const s = await getModelStatus();
+      setStatus(s);
+      setIsWaking(false);
+      setBackendError(null);
+    } catch (err) {
+      if (currAttempt < maxAttempts) {
+        setIsWaking(true);
+        setAttempt(currAttempt);
+        setCountdown(4);
+      } else {
+        setIsWaking(false);
+        setBackendError(err.message || "Failed to connect to backend");
+      }
+    }
+  }, [maxAttempts]);
+
   useEffect(() => {
-    Promise.all([getHealth(), getModelStatus()])
-      .then(([h, s]) => {
-        setHealth(h);
-        setStatus(s);
-      })
-      .catch((e) => setBackendError(e.message));
-  }, []);
+    checkBackend(1);
+  }, [checkBackend]);
+
+  useEffect(() => {
+    if (!isWaking) return;
+    if (countdown > 0) {
+      const timer = setTimeout(() => setCountdown((c) => c - 1), 1000);
+      return () => clearTimeout(timer);
+    } else {
+      checkBackend(attempt + 1);
+    }
+  }, [isWaking, countdown, attempt, checkBackend]);
+
+  const onRetry = () => {
+    setIsWaking(true);
+    setAttempt(1);
+    setCountdown(0);
+    setBackendError(null);
+  };
 
   const stage1Loaded = status?.models?.find((m) => m.key === "stage1")?.loaded;
 
@@ -231,7 +293,16 @@ export default function App() {
       </header>
       <p className="disclaimer">{DISCLAIMER}</p>
 
-      <ModelPanel health={health} status={status} error={backendError} />
+      <ModelPanel
+        health={health}
+        status={status}
+        error={backendError}
+        isWaking={isWaking}
+        attempt={attempt}
+        maxAttempts={maxAttempts}
+        countdown={countdown}
+        onRetry={onRetry}
+      />
 
       <section className="card">
         <h2>Analyse an image</h2>
@@ -250,10 +321,10 @@ export default function App() {
             <input type="checkbox" checked={continueUncertain} onChange={(e) => setContinueUncertain(e.target.checked)} />
             Continue the cascade when Stage 1 is uncertain
           </label>
-          <button type="submit" disabled={busy || !file || backendError || !stage1Loaded}>
+          <button type="submit" disabled={busy || !file || backendError || isWaking || !stage1Loaded}>
             {busy ? "Analysing…" : "Analyse"}
           </button>
-          {status && !stage1Loaded && (
+          {status && !stage1Loaded && !isWaking && !backendError && (
             <p className="warn">Analysis is disabled because the Stage 1 model is not loaded on the backend.</p>
           )}
         </form>

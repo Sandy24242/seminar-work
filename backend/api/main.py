@@ -55,11 +55,15 @@ async def lifespan(_app):
     yield
 
 
+cors_origins = [o.strip() for o in os.environ.get(
+    "DCAI_CORS_ORIGINS", "http://127.0.0.1:5173,http://localhost:5173").split(",") if o.strip()]
+cors_regex = os.environ.get("DCAI_CORS_ORIGIN_REGEX", r"^https://.*\.vercel\.app$")
+
 app = FastAPI(title=config.APP_TITLE, version=config.APP_VERSION, lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[o.strip() for o in os.environ.get(
-        "DCAI_CORS_ORIGINS", "http://127.0.0.1:5173,http://localhost:5173").split(",") if o.strip()],
+    allow_origins=cors_origins,
+    allow_origin_regex=cors_regex if cors_regex else None,
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )

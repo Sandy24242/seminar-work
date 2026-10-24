@@ -1,0 +1,22 @@
+name: Best-Effort Cloud Wake-Up Ping
+
+on:
+  schedule:
+    # Runs periodically during daytime demonstration hours to reduce cold starts
+    - cron: '*/20 4-16 * * 1-5'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping health endpoint
+        env:
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}
+        run: |
+          if [ -z "$BACKEND_URL" ]; then
+            echo "BACKEND_URL secret not set. Skipping ping."
+            exit 0
+          fi
+          echo "Pinging $BACKEND_URL/health ..."
+          curl -f -s -m 30 "$BACKEND_URL/health" || echo "Ping request sent (backend may be spinning up)."

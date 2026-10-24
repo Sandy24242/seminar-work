@@ -12,6 +12,8 @@ import time
 
 import config
 
+LFS_HEADER = b"version https://git-lfs"
+
 
 class ModelRegistry:
     def __init__(self, models_dir):
@@ -44,6 +46,17 @@ class ModelRegistry:
         if not os.path.isfile(path):
             self.unavailable[stage] = f"model file {config.MODEL_FILES[stage]} not found"
             return False
+        if os.path.getsize(path) < 1024:
+            try:
+                with open(path, "rb") as fh:
+                    if fh.read(len(LFS_HEADER)) == LFS_HEADER:
+                        self.unavailable[stage] = (
+                            f"model file {config.MODEL_FILES[stage]} is a Git LFS pointer file. "
+                            "Real model weights must be pulled using git lfs."
+                        )
+                        return False
+            except OSError:
+                pass
         t0 = time.time()
         try:
             import keras

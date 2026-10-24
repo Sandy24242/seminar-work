@@ -17,12 +17,18 @@ async function parse(res) {
   return body;
 }
 
-export const getHealth = () => fetch(`${API_BASE}/health`).then(parse);
-export const getModelStatus = () => fetch(`${API_BASE}/models/status`).then(parse);
+function fetchWithTimeout(url, options = {}, timeoutMs = 15000) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(id));
+}
+
+export const getHealth = () => fetchWithTimeout(`${API_BASE}/health`, {}, 8000).then(parse);
+export const getModelStatus = () => fetchWithTimeout(`${API_BASE}/models/status`, {}, 15000).then(parse);
 
 export function predict(file, continueIfUncertain) {
   const fd = new FormData();
   fd.append("file", file);
   fd.append("continue_if_uncertain", continueIfUncertain ? "true" : "false");
-  return fetch(`${API_BASE}/predict`, { method: "POST", body: fd }).then(parse);
+  return fetchWithTimeout(`${API_BASE}/predict`, { method: "POST", body: fd }, 90000).then(parse);
 }
