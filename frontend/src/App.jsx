@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { API_BASE, getHealth, getModelStatus, predict } from "./api.js";
 import logo from "./logo.png";
 
@@ -14,58 +14,47 @@ const STAGE_ROWS = [
   ["stage4", "Stage 4 — ICDAS score"],
 ];
 
+const STREAMLIT_URL =
+  import.meta.env.VITE_STREAMLIT_URL || "https://dental-caries-ai.streamlit.app";
+
 const pct = (v) => (v == null ? "—" : `${(v * 100).toFixed(1)}%`);
 
 function Badge({ status }) {
   return <span className={`badge badge-${String(status).toLowerCase()}`}>{status}</span>;
 }
 
-function ModelPanel({ health, status, error, isWaking, attempt, maxAttempts, countdown, onRetry }) {
-  if (isWaking) {
-    return (
-      <section className="card card-waking">
-        <div className="waking-header">
-          <div className="spinner" aria-hidden="true" />
-          <div>
-            <h2 style={{ margin: 0 }}>Backend is waking up…</h2>
-            <p className="muted small" style={{ margin: "4px 0 0" }}>
-              Free-tier cloud containers sleep when idle. Starting container and loading TensorFlow models (~15–30s).
-            </p>
-          </div>
-        </div>
-        <div className="waking-status">
-          <span>Attempt {attempt} of {maxAttempts} · Retrying in {countdown}s</span>
-          <button type="button" className="btn-secondary" onClick={onRetry}>
-            Retry Now
-          </button>
-        </div>
-      </section>
-    );
+function LocalModelPanel({ health, status, error, checking }) {
+  if (checking) {
+    return <section className="card"><p className="muted">Checking local FastAPI backend at <code>{API_BASE}</code>…</p></section>;
   }
 
   if (error) {
     return (
-      <section className="card error">
-        <h2>Backend not reachable</h2>
-        <p>
-          Could not contact <code>{API_BASE}</code>: {error}. If the backend was sleeping, it may take up to 30 seconds to wake up.
+      <section className="card">
+        <h3>Local API Status: <Badge status="Offline" /></h3>
+        <p className="muted small">
+          No FastAPI server running at <code>{API_BASE}</code>.
         </p>
-        <button type="button" className="btn-secondary" onClick={onRetry}>
-          Retry Connection
-        </button>
+        <p className="small">
+          To run predictions through this React interface, start the backend locally:
+          <br />
+          <code>cd backend && uvicorn api.main:app --host 127.0.0.1 --port 8000</code>
+        </p>
+        <p className="small" style={{ margin: 0 }}>
+          <strong>For the live cloud demo with all 5 models preloaded:</strong> use the Streamlit Cloud application above.
+        </p>
       </section>
     );
   }
 
-  if (!status) return <section className="card">Checking backend…</section>;
+  if (!status) return null;
 
   return (
     <section className="card">
-      <h2>
-        Model status{" "}
-        <Badge status={status.ready ? "Ready" : "Incomplete"} />
-      </h2>
-      <p className="muted">
+      <h3>
+        Local Model Status <Badge status={status.ready ? "Ready" : "Incomplete"} />
+      </h3>
+      <p className="muted small">
         API {health?.status === "ok" ? "healthy" : "unknown"} · TensorFlow {status.versions?.tensorflow || "n/a"} · Keras{" "}
         {status.versions?.keras || "n/a"}
       </p>
@@ -96,9 +85,8 @@ function ModelPanel({ health, status, error, isWaking, attempt, maxAttempts, cou
         </tbody>
       </table>
       {!status.ready && (
-        <p className="warn">
-          Required model(s) missing: {status.missing_required.join(", ")}. The stages that need them are reported as
-          unavailable; no predictions are made up for them.
+        <p className="warn small">
+          Required model(s) missing: {status.missing_required.join(", ")}. Stages that need them will report as unavailable.
         </p>
       )}
     </section>
@@ -209,60 +197,33 @@ export default function App() {
   const [health, setHealth] = useState(null);
   const [status, setStatus] = useState(null);
   const [backendError, setBackendError] = useState(null);
-  const [isWaking, setIsWaking] = useState(false);
-  const [attempt, setAttempt] = useState(1);
-  const [countdown, setCountdown] = useState(4);
+  const [checking, setChecking] = useState(true);
+  const [showDevMode, setShowDevMode] = useState(false);
+
   const [file, setFile] = useState(null);
   const [continueUncertain, setContinueUncertain] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const [result, setResult] = useState(null);
 
-  const maxAttempts = 12;
-
   const previewUrl = useMemo(() => (file ? URL.createObjectURL(file) : null), [file]);
   useEffect(() => () => previewUrl && URL.revokeObjectURL(previewUrl), [previewUrl]);
 
-  const checkBackend = useCallback(async (currAttempt = 1) => {
-    try {
-      const h = await getHealth();
-      setHealth(h);
-      const s = await getModelStatus();
-      setStatus(s);
-      setIsWaking(false);
-      setBackendError(null);
-    } catch (err) {
-      if (currAttempt < maxAttempts) {
-        setIsWaking(true);
-        setAttempt(currAttempt);
-        setCountdown(4);
-      } else {
-        setIsWaking(false);
-        setBackendError(err.message || "Failed to connect to backend");
-      }
-    }
-  }, [maxAttempts]);
-
   useEffect(() => {
-    checkBackend(1);
-  }, [checkBackend]);
-
-  useEffect(() => {
-    if (!isWaking) return;
-    if (countdown > 0) {
-      const timer = setTimeout(() => setCountdown((c) => c - 1), 1000);
-      return () => clearTimeout(timer);
-    } else {
-      checkBackend(attempt + 1);
-    }
-  }, [isWaking, countdown, attempt, checkBackend]);
-
-  const onRetry = () => {
-    setIsWaking(true);
-    setAttempt(1);
-    setCountdown(0);
-    setBackendError(null);
-  };
+    Promise.all([getHealth(), getModelStatus()])
+      .then(([h, s]) => {
+        setHealth(h);
+        setStatus(s);
+        setBackendError(null);
+        setShowDevMode(true); // Automatically show dev panel if backend is running
+      })
+      .catch((e) => {
+        setBackendError(e.message);
+      })
+      .finally(() => {
+        setChecking(false);
+      });
+  }, []);
 
   const stage1Loaded = status?.models?.find((m) => m.key === "stage1")?.loaded;
 
@@ -288,50 +249,122 @@ export default function App() {
         <img src={logo} alt="" className="logo" />
         <div>
           <h1>Dental Caries AI</h1>
-          <p className="muted">AI-assisted analysis of intraoral photographs — Stage 1 to Stage 4 cascade</p>
+          <p className="muted">AI-assisted analysis of intraoral photographs — Multi-CNN Cascade System</p>
         </div>
       </header>
       <p className="disclaimer">{DISCLAIMER}</p>
 
-      <ModelPanel
-        health={health}
-        status={status}
-        error={backendError}
-        isWaking={isWaking}
-        attempt={attempt}
-        maxAttempts={maxAttempts}
-        countdown={countdown}
-        onRetry={onRetry}
-      />
+      {/* Main Landing & Cloud Demo Card */}
+      <section className="hero-card">
+        <div className="hero-badge-row">
+          <Badge status="Live" />
+          <span className="muted small">Hosted on Streamlit Community Cloud (Zero Cost · 24/7 Available)</span>
+        </div>
+        <h2 className="hero-title">Interactive Cloud Demonstration</h2>
+        <p className="hero-desc">
+          The complete, verified four-stage deep learning pipeline (healthy screening, FDI tooth identification,
+          lesion localization, G.V. Black classification, and ICDAS scoring) is deployed and running in the cloud.
+          Includes an interactive 7-question oral-habits assessment and automated PDF diagnostic reports.
+        </p>
+        <a
+          href={STREAMLIT_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="cta-btn"
+        >
+          Launch Streamlit Cloud Demo ↗
+        </a>
+        <div className="cta-note">
+          Accessible from any browser or mobile device, even when your personal computer is turned off.
+        </div>
 
-      <section className="card">
-        <h2>Analyse an image</h2>
-        <form onSubmit={onSubmit}>
-          <input
-            type="file"
-            accept=".jpg,.jpeg,.png,image/jpeg,image/png"
-            onChange={(e) => {
-              setFile(e.target.files?.[0] || null);
-              setResult(null);
-              setError(null);
-            }}
-          />
-          {previewUrl && !result && <img className="preview" src={previewUrl} alt="Preview" />}
-          <label className="check">
-            <input type="checkbox" checked={continueUncertain} onChange={(e) => setContinueUncertain(e.target.checked)} />
-            Continue the cascade when Stage 1 is uncertain
-          </label>
-          <button type="submit" disabled={busy || !file || backendError || isWaking || !stage1Loaded}>
-            {busy ? "Analysing…" : "Analyse"}
-          </button>
-          {status && !stage1Loaded && !isWaking && !backendError && (
-            <p className="warn">Analysis is disabled because the Stage 1 model is not loaded on the backend.</p>
-          )}
-        </form>
-        {error && <p className="error-text">{error}</p>}
+        <div className="pipeline-grid">
+          <div className="pipeline-box">
+            <h4>Stage 1: Caries Screening</h4>
+            <p>EfficientNetB0 binary classifier separates healthy intraoral photos from caries.</p>
+          </div>
+          <div className="pipeline-box">
+            <h4>Stage 2: FDI Numbering</h4>
+            <p>Custom tooth grid detector locates and maps individual teeth using FDI notation.</p>
+          </div>
+          <div className="pipeline-box">
+            <h4>Stage 3: G.V. Black</h4>
+            <p>Class-agnostic lesion localizer + ResNet50 assigns Class I through VI to each cavity.</p>
+          </div>
+          <div className="pipeline-box">
+            <h4>Stage 4: ICDAS Score</h4>
+            <p>EfficientNetB0 evaluates lesion severity on the ICDAS 1–6 dental grading scale.</p>
+          </div>
+        </div>
       </section>
 
-      {result && <Results res={result} previewUrl={previewUrl} />}
+      {/* Developer / Local API Mode */}
+      <section className="dev-section">
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div>
+            <h3 style={{ margin: "0 0 4px" }}>Local Developer & API Mode</h3>
+            <p className="muted small" style={{ margin: 0 }}>
+              Use this section when testing the local FastAPI backend (<code>{API_BASE}</code>).
+            </p>
+          </div>
+          <button
+            type="button"
+            className="dev-toggle"
+            onClick={() => setShowDevMode((v) => !v)}
+          >
+            {showDevMode ? "Hide Local API" : "Show Local API"}
+          </button>
+        </div>
+
+        {showDevMode && (
+          <>
+            <LocalModelPanel
+              health={health}
+              status={status}
+              error={backendError}
+              checking={checking}
+            />
+
+            {health?.status === "ok" && (
+              <section className="card">
+                <h2>Analyse an image (Local API)</h2>
+                <form onSubmit={onSubmit}>
+                  <input
+                    type="file"
+                    accept=".jpg,.jpeg,.png,image/jpeg,image/png"
+                    onChange={(e) => {
+                      setFile(e.target.files?.[0] || null);
+                      setResult(null);
+                      setError(null);
+                    }}
+                  />
+                  {previewUrl && !result && <img className="preview" src={previewUrl} alt="Preview" />}
+                  <label className="check">
+                    <input
+                      type="checkbox"
+                      checked={continueUncertain}
+                      onChange={(e) => setContinueUncertain(e.target.checked)}
+                    />
+                    Continue the cascade when Stage 1 is uncertain
+                  </label>
+                  <button
+                    type="submit"
+                    disabled={busy || !file || backendError || !stage1Loaded}
+                  >
+                    {busy ? "Analysing…" : "Analyse"}
+                  </button>
+                  {status && !stage1Loaded && !backendError && (
+                    <p className="warn">Analysis is disabled because the Stage 1 model is not loaded on the local backend.</p>
+                  )}
+                </form>
+                {error && <p className="error-text">{error}</p>}
+              </section>
+            )}
+
+            {result && <Results res={result} previewUrl={previewUrl} />}
+          </>
+        )}
+      </section>
     </div>
   );
 }

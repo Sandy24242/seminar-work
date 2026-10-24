@@ -1,21 +1,77 @@
 :root {
-  --bg: #f4f8fb; --card: #fff; --text: #17324d; --muted: #5b7186; --accent: #0f7c90; --border: #d9e4ec;
-  --ok: #1d7a46; --warn: #a15c00; --bad: #b42318;
+  --bg: #f4f8fb; --card: #fff; --text: #17324d; --muted: #5b7186; --accent: #0f7c90; --accent-hover: #0a5f70;
+  --border: #d9e4ec; --ok: #1d7a46; --warn: #a15c00; --bad: #b42318;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--text);
 }
-body { margin: 0; background: var(--bg); }
+body { margin: 0; background: var(--bg); line-height: 1.5; }
 .page { max-width: 960px; margin: 0 auto; padding: 24px 16px 48px; }
 header { display: flex; gap: 16px; align-items: center; }
 header h1 { margin: 0; color: var(--accent); }
 .logo { width: 64px; height: 64px; object-fit: contain; }
+
 .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-top: 20px; }
 .card h2 { margin-top: 0; }
 .card.error { border-color: var(--bad); }
-.card-waking { border-color: var(--accent); background: #f0f8fa; }
-.waking-header { display: flex; gap: 14px; align-items: center; }
-.waking-status { display: flex; justify-content: space-between; align-items: center; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); font-size: 0.9rem; }
-.spinner { width: 22px; height: 22px; border: 3px solid rgba(15, 124, 144, 0.2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.9s linear infinite; flex-shrink: 0; }
-@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Landing hero & CTA */
+.hero-card {
+  background: linear-gradient(180deg, #ffffff 0%, #f0f7fa 100%);
+  border: 2px solid var(--accent);
+  border-radius: 14px;
+  padding: 24px;
+  margin-top: 20px;
+}
+.hero-badge-row { display: flex; gap: 8px; margin-bottom: 12px; align-items: center; flex-wrap: wrap; }
+.hero-title { margin: 0 0 8px; font-size: 1.5rem; color: var(--text); }
+.hero-desc { margin: 0 0 20px; color: var(--muted); font-size: 1.02rem; max-width: 760px; }
+.cta-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--accent);
+  color: #fff;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 1.05rem;
+  padding: 12px 24px;
+  border-radius: 8px;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+.cta-btn:hover { background: var(--accent-hover); transform: translateY(-1px); }
+.cta-note { margin-top: 10px; font-size: 0.85rem; color: var(--muted); }
+
+/* Feature / Pipeline grid */
+.pipeline-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+.pipeline-box {
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+}
+.pipeline-box h4 { margin: 0 0 4px; font-size: 0.95rem; color: var(--accent); }
+.pipeline-box p { margin: 0; font-size: 0.82rem; color: var(--muted); }
+
+/* Collapsible dev mode */
+.dev-section { margin-top: 32px; border-top: 1px dashed var(--border); padding-top: 20px; }
+.dev-toggle {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.9rem;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.dev-toggle:hover { background: #eef3f6; color: var(--text); }
+
 .muted { color: var(--muted); }
 .small { font-size: 0.85rem; }
 .warn { color: var(--warn); }
@@ -24,8 +80,8 @@ header h1 { margin: 0; color: var(--accent); }
 table { width: 100%; border-collapse: collapse; margin-top: 8px; }
 th, td { text-align: left; padding: 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
 .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.78rem; font-weight: 600; background: #e7edf2; }
-.badge-loaded, .badge-completed, .badge-ready { background: #dcf3e5; color: var(--ok); }
-.badge-unavailable, .badge-failed, .badge-incomplete { background: #fde4e1; color: var(--bad); }
+.badge-loaded, .badge-completed, .badge-ready, .badge-live { background: #dcf3e5; color: var(--ok); }
+.badge-unavailable, .badge-failed, .badge-incomplete, .badge-offline { background: #fde4e1; color: var(--bad); }
 .badge-uncertain { background: #fff1d6; color: var(--warn); }
 form { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; }
 .check { display: flex; gap: 8px; align-items: center; }
